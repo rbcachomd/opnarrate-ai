@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          # A placeholder key so the build step (which only type-checks/bundles
+          # the route handler, it does not call the API at build time) succeeds
+          # without requiring a real secret in CI. The real key lives only in
+          # Vercel's Environment Variables for the deployed app.
+          ANTHROPIC_API_KEY: "placeholder-for-ci-build-only"
