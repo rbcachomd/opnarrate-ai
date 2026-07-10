@@ -1,0 +1,15 @@
+# .cursorrules — OpNarrate AI
+
+You are assisting on OpNarrate AI, a Next.js 14 + TypeScript + Tailwind app that generates OB-GYN operative technique/findings drafts via the Anthropic Claude API. Read `spec.md` and `CLAUDE.md` before making changes.
+
+Rules:
+- Never hardcode API keys or secrets; use `process.env.ANTHROPIC_API_KEY` server-side only.
+- Do not call the Anthropic SDK from any file under `components/` or any client component (`"use client"`).
+- Always validate API route input with the `zod` schemas in `lib/validation.ts`.
+- Ground any AI prompt construction in `lib/procedureTemplates.ts`; do not remove the template-grounding step.
+- Preserve the "AI-Generated Draft — Physician Review Required" label on any generated-content UI.
+- Use TypeScript strict mode; avoid `any`.
+- Use Tailwind utility classes for styling; do not introduce other CSS frameworks.
+- Write or update a Vitest unit test in `tests/` for any new pure function in `lib/`.
+- Use Conventional Commit messages (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`).
+- Do not add a database, auth provider, or payment integration unless the spec is revised first.
