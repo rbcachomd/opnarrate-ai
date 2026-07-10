@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import DictationRecorder from "./DictationRecorder";
+import StepIndicator from "./StepIndicator";
 import { PROCEDURE_OPTIONS } from "@/lib/procedureTemplates";
 import { ANESTHESIA_TYPES } from "@/lib/validation";
 
 interface IntakeFormProps {
   onResult: (result: { technique: string; findings: string }) => void;
 }
+
+const STEPS = ["Procedure", "Patient", "Diagnoses", "Surgical Team", "Case Summary"];
 
 const initialState = {
   procedureId: PROCEDURE_OPTIONS[0]?.id ?? "cesarean_section",
@@ -36,9 +39,11 @@ const initialState = {
 };
 
 export default function IntakeForm({ onResult }: IntakeFormProps) {
+  const [step, setStep] = useState(0);
   const [form, setForm] = useState(initialState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -52,8 +57,49 @@ export default function IntakeForm({ onResult }: IntakeFormProps) {
     value: (typeof form)[K][F]
   ) => setForm((f) => ({ ...f, [section]: { ...f[section], [field]: value } }));
 
+  const validateStep = (): string | null => {
+    if (step === 0 && form.procedureId === "other" && !form.customProcedureName.trim()) {
+      return "Please name the custom procedure.";
+    }
+    if (step === 1) {
+      const p = form.patient;
+      if (!p.nameOrInitials.trim()) return "Patient name/initials is required.";
+      if (!p.hospitalNumber.trim()) return "Hospital number is required.";
+      if (!p.age) return "Age is required.";
+      if (!p.admissionDateTime.trim()) return "Admission date/time is required.";
+      if (!p.operationDateTime.trim()) return "Operation date/time is required.";
+    }
+    if (step === 2 && !form.diagnoses.preOp.trim()) {
+      return "Pre-operative diagnosis is required.";
+    }
+    if (step === 3 && !form.team.surgeon.trim()) {
+      return "Surgeon is required.";
+    }
+    return null;
+  };
+
+  const goNext = () => {
+    const err = validateStep();
+    if (err) {
+      setStepError(err);
+      return;
+    }
+    setStepError(null);
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
+
+  const goBack = () => {
+    setStepError(null);
+    setStep((s) => Math.max(s - 1, 0));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.dictationText.trim().length < 10) {
+      setStepError("Please provide at least a brief dictated/typed summary of the case (10+ characters).");
+      return;
+    }
+    setStepError(null);
     setError(null);
     setLoading(true);
     try {
@@ -75,194 +121,236 @@ export default function IntakeForm({ onResult }: IntakeFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Procedure */}
-      <fieldset className="rounded-lg border border-gray-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-obgyn-maroon">Procedure</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="text-sm font-medium text-gray-700">Procedure Template</label>
-            <select
-              value={form.procedureId}
-              onChange={(e) => update("procedureId", e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
-            >
-              {PROCEDURE_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {form.procedureId === "other" && (
-            <div>
-              <label className="text-sm font-medium text-gray-700">Custom Procedure Name</label>
-              <input
-                type="text"
-                value={form.customProcedureName}
-                onChange={(e) => update("customProcedureName", e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+      <StepIndicator steps={STEPS} currentStep={step} />
+
+      <form onSubmit={handleSubmit}>
+        {/* Step 0: Procedure */}
+        {step === 0 && (
+          <Section title="Procedure &amp; Anesthesia">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Procedure Template"
+                value={form.procedureId}
+                onChange={(v) => update("procedureId", v)}
+                options={PROCEDURE_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
+              />
+              {form.procedureId === "other" && (
+                <Field
+                  label="Custom Procedure Name"
+                  required
+                  value={form.customProcedureName}
+                  onChange={(v) => update("customProcedureName", v)}
+                />
+              )}
+              <SelectField
+                label="Anesthesia Type"
+                value={form.anesthesiaType}
+                onChange={(v) => update("anesthesiaType", v as any)}
+                options={ANESTHESIA_TYPES.map((a) => ({ value: a, label: a }))}
               />
             </div>
-          )}
-          <div>
-            <label className="text-sm font-medium text-gray-700">Anesthesia Type</label>
-            <select
-              value={form.anesthesiaType}
-              onChange={(e) => update("anesthesiaType", e.target.value as any)}
-              className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
-            >
-              {ANESTHESIA_TYPES.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
+          </Section>
+        )}
+
+        {/* Step 1: Patient */}
+        {step === 1 && (
+          <Section title="Patient Data">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Patient Name / Initials"
+                required
+                value={form.patient.nameOrInitials}
+                onChange={(v) => updateNested("patient", "nameOrInitials", v)}
+              />
+              <Field
+                label="Hospital Number"
+                required
+                value={form.patient.hospitalNumber}
+                onChange={(v) => updateNested("patient", "hospitalNumber", v)}
+              />
+              <Field
+                label="Age"
+                type="number"
+                required
+                value={form.patient.age}
+                onChange={(v) => updateNested("patient", "age", v)}
+              />
+              <Field
+                label="Address"
+                value={form.patient.address}
+                onChange={(v) => updateNested("patient", "address", v)}
+              />
+              <Field
+                label="Admission Date/Time"
+                required
+                placeholder="e.g., July 10, 2026, 0600H"
+                value={form.patient.admissionDateTime}
+                onChange={(v) => updateNested("patient", "admissionDateTime", v)}
+              />
+              <Field
+                label="Operation Date/Time"
+                required
+                placeholder="e.g., July 10, 2026, 0830H"
+                value={form.patient.operationDateTime}
+                onChange={(v) => updateNested("patient", "operationDateTime", v)}
+              />
+              <Field
+                label="Gravidity"
+                type="number"
+                value={form.patient.gravidity}
+                onChange={(v) => updateNested("patient", "gravidity", v)}
+              />
+              <Field
+                label="Parity"
+                placeholder="e.g., 2103"
+                value={form.patient.parity}
+                onChange={(v) => updateNested("patient", "parity", v)}
+              />
+            </div>
+          </Section>
+        )}
+
+        {/* Step 2: Diagnoses */}
+        {step === 2 && (
+          <Section title="Diagnoses">
+            <div className="grid gap-4">
+              <Field
+                label="Pre-operative Diagnosis"
+                required
+                value={form.diagnoses.preOp}
+                onChange={(v) => updateNested("diagnoses", "preOp", v)}
+              />
+              <Field
+                label="Intra-operative Diagnosis"
+                value={form.diagnoses.intraOp}
+                onChange={(v) => updateNested("diagnoses", "intraOp", v)}
+              />
+              <Field
+                label="Post-operative Diagnosis"
+                value={form.diagnoses.postOp}
+                onChange={(v) => updateNested("diagnoses", "postOp", v)}
+              />
+            </div>
+          </Section>
+        )}
+
+        {/* Step 3: Surgical Team */}
+        {step === 3 && (
+          <Section title="Surgical Team">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Surgeon"
+                required
+                value={form.team.surgeon}
+                onChange={(v) => updateNested("team", "surgeon", v)}
+              />
+              <Field
+                label="Assistant Surgeon"
+                value={form.team.assistantSurgeon}
+                onChange={(v) => updateNested("team", "assistantSurgeon", v)}
+              />
+              <Field
+                label="Second Assist"
+                value={form.team.secondAssist}
+                onChange={(v) => updateNested("team", "secondAssist", v)}
+              />
+              <Field
+                label="Scrub Nurse"
+                value={form.team.scrubNurse}
+                onChange={(v) => updateNested("team", "scrubNurse", v)}
+              />
+              <Field
+                label="Circulating Nurse"
+                value={form.team.circulatingNurse}
+                onChange={(v) => updateNested("team", "circulatingNurse", v)}
+              />
+              <Field
+                label="Anesthesiologist"
+                value={form.team.anesthesiologist}
+                onChange={(v) => updateNested("team", "anesthesiologist", v)}
+              />
+            </div>
+          </Section>
+        )}
+
+        {/* Step 4: Case Summary */}
+        {step === 4 && (
+          <Section title="Case Summary">
+            <DictationRecorder
+              value={form.dictationText}
+              onChange={(v) => update("dictationText", v)}
+            />
+          </Section>
+        )}
+
+        {stepError && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+            {stepError}
           </div>
+        )}
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-6">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={step === 0 || loading}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-0"
+          >
+            ← Back
+          </button>
+
+          {step < STEPS.length - 1 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="rounded-lg bg-obgyn-navy px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            >
+              Continue →
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg bg-obgyn-maroon px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {loading && (
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-90"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              )}
+              {loading ? "Generating draft…" : "Generate Operative Technique & Findings"}
+            </button>
+          )}
         </div>
-      </fieldset>
+      </form>
+    </div>
+  );
+}
 
-      {/* Patient */}
-      <fieldset className="rounded-lg border border-gray-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-obgyn-maroon">Patient Data</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Patient Name / Initials"
-            required
-            value={form.patient.nameOrInitials}
-            onChange={(v) => updateNested("patient", "nameOrInitials", v)}
-          />
-          <Field
-            label="Hospital Number"
-            required
-            value={form.patient.hospitalNumber}
-            onChange={(v) => updateNested("patient", "hospitalNumber", v)}
-          />
-          <Field
-            label="Age"
-            type="number"
-            required
-            value={form.patient.age}
-            onChange={(v) => updateNested("patient", "age", v)}
-          />
-          <Field
-            label="Address"
-            value={form.patient.address}
-            onChange={(v) => updateNested("patient", "address", v)}
-          />
-          <Field
-            label="Admission Date/Time"
-            required
-            placeholder="e.g., July 10, 2026, 0600H"
-            value={form.patient.admissionDateTime}
-            onChange={(v) => updateNested("patient", "admissionDateTime", v)}
-          />
-          <Field
-            label="Operation Date/Time"
-            required
-            placeholder="e.g., July 10, 2026, 0830H"
-            value={form.patient.operationDateTime}
-            onChange={(v) => updateNested("patient", "operationDateTime", v)}
-          />
-          <Field
-            label="Gravidity"
-            type="number"
-            value={form.patient.gravidity}
-            onChange={(v) => updateNested("patient", "gravidity", v)}
-          />
-          <Field
-            label="Parity"
-            placeholder="e.g., 2103"
-            value={form.patient.parity}
-            onChange={(v) => updateNested("patient", "parity", v)}
-          />
-        </div>
-      </fieldset>
-
-      {/* Diagnoses */}
-      <fieldset className="rounded-lg border border-gray-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-obgyn-maroon">Diagnoses</legend>
-        <div className="grid gap-4">
-          <Field
-            label="Pre-operative Diagnosis"
-            required
-            value={form.diagnoses.preOp}
-            onChange={(v) => updateNested("diagnoses", "preOp", v)}
-          />
-          <Field
-            label="Intra-operative Diagnosis"
-            value={form.diagnoses.intraOp}
-            onChange={(v) => updateNested("diagnoses", "intraOp", v)}
-          />
-          <Field
-            label="Post-operative Diagnosis"
-            value={form.diagnoses.postOp}
-            onChange={(v) => updateNested("diagnoses", "postOp", v)}
-          />
-        </div>
-      </fieldset>
-
-      {/* Surgical Team */}
-      <fieldset className="rounded-lg border border-gray-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-obgyn-maroon">Surgical Team</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Surgeon"
-            required
-            value={form.team.surgeon}
-            onChange={(v) => updateNested("team", "surgeon", v)}
-          />
-          <Field
-            label="Assistant Surgeon"
-            value={form.team.assistantSurgeon}
-            onChange={(v) => updateNested("team", "assistantSurgeon", v)}
-          />
-          <Field
-            label="Second Assist"
-            value={form.team.secondAssist}
-            onChange={(v) => updateNested("team", "secondAssist", v)}
-          />
-          <Field
-            label="Scrub Nurse"
-            value={form.team.scrubNurse}
-            onChange={(v) => updateNested("team", "scrubNurse", v)}
-          />
-          <Field
-            label="Circulating Nurse"
-            value={form.team.circulatingNurse}
-            onChange={(v) => updateNested("team", "circulatingNurse", v)}
-          />
-          <Field
-            label="Anesthesiologist"
-            value={form.team.anesthesiologist}
-            onChange={(v) => updateNested("team", "anesthesiologist", v)}
-          />
-        </div>
-      </fieldset>
-
-      {/* Dictation */}
-      <fieldset className="rounded-lg border border-gray-200 p-4">
-        <legend className="px-1 text-sm font-semibold text-obgyn-maroon">Case Summary</legend>
-        <DictationRecorder
-          value={form.dictationText}
-          onChange={(v) => update("dictationText", v)}
-        />
-      </fieldset>
-
-      {error && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-md bg-obgyn-maroon px-4 py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-      >
-        {loading ? "Generating…" : "Generate Operative Technique & Findings"}
-      </button>
-    </form>
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h2 className="mb-5 text-base font-semibold text-obgyn-maroon">{title}</h2>
+      {children}
+    </div>
   );
 }
 
@@ -285,7 +373,7 @@ function Field({
     <div>
       <label className="text-sm font-medium text-gray-700">
         {label}
-        {required && <span className="text-red-600"> *</span>}
+        {required && <span className="text-obgyn-maroon"> *</span>}
       </label>
       <input
         type={type}
@@ -293,8 +381,37 @@ function Field({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm focus:border-obgyn-navy focus:outline-none focus:ring-1 focus:ring-obgyn-navy"
+        className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm transition-colors focus:border-obgyn-navy focus:outline-none focus:ring-2 focus:ring-obgyn-navy/20"
       />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus:border-obgyn-navy focus:outline-none focus:ring-2 focus:ring-obgyn-navy/20"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -13,6 +13,9 @@ const config: Config = {
           navy: "#1F3A5F",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
     },
   },
   plugins: [],
