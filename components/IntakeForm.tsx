@@ -3,7 +3,7 @@
 import { useState } from "react";
 import DictationRecorder from "./DictationRecorder";
 import StepIndicator from "./StepIndicator";
-import { PROCEDURE_OPTIONS } from "@/lib/procedureTemplates";
+import { getProcedureOptionsByCategory, type ProcedureCategory } from "@/lib/procedureTemplates";
 import { ANESTHESIA_TYPES } from "@/lib/validation";
 
 interface IntakeFormProps {
@@ -13,7 +13,7 @@ interface IntakeFormProps {
 const STEPS = ["Procedure", "Patient", "Diagnoses", "Surgical Team", "Case Summary"];
 
 const initialState = {
-  procedureId: PROCEDURE_OPTIONS[0]?.id ?? "cesarean_section",
+  procedureId: getProcedureOptionsByCategory("obstetric")[0]?.id ?? "cesarean_section",
   customProcedureName: "",
   anesthesiaType: ANESTHESIA_TYPES[0],
   patient: {
@@ -40,9 +40,22 @@ const initialState = {
 
 export default function IntakeForm({ onResult }: IntakeFormProps) {
   const [step, setStep] = useState(0);
+  const [category, setCategory] = useState<Extract<ProcedureCategory, "obstetric" | "gynecologic">>(
+    "obstetric"
+  );
   const [form, setForm] = useState(initialState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleCategoryChange = (newCategory: "obstetric" | "gynecologic") => {
+    setCategory(newCategory);
+    const optionsForCategory = getProcedureOptionsByCategory(newCategory);
+    setForm((f) => ({
+      ...f,
+      procedureId: optionsForCategory[0]?.id ?? "other",
+      customProcedureName: "",
+    }));
+  };
   const [stepError, setStepError] = useState<string | null>(null);
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
@@ -128,12 +141,34 @@ export default function IntakeForm({ onResult }: IntakeFormProps) {
         {/* Step 0: Procedure */}
         {step === 0 && (
           <Section title="Procedure &amp; Anesthesia">
+            <div className="mb-5">
+              <label className="text-sm font-medium text-gray-700">Procedure Category</label>
+              <div className="mt-1.5 inline-flex rounded-lg border border-gray-300 p-1">
+                {(["obstetric", "gynecologic"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
+                      category === cat
+                        ? "bg-obgyn-maroon text-white shadow-sm"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {cat === "obstetric" ? "Obstetric" : "Gynecologic"}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <SelectField
                 label="Procedure Template"
                 value={form.procedureId}
                 onChange={(v) => update("procedureId", v)}
-                options={PROCEDURE_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
+                options={getProcedureOptionsByCategory(category).map((o) => ({
+                  value: o.id,
+                  label: o.label,
+                }))}
               />
               {form.procedureId === "other" && (
                 <Field

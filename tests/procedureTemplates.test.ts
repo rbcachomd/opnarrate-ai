@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getTemplate, PROCEDURE_OPTIONS, PROCEDURE_TEMPLATES } from "../lib/procedureTemplates";
+import {
+  getTemplate,
+  getProcedureOptionsByCategory,
+  PROCEDURE_OPTIONS,
+  PROCEDURE_TEMPLATES,
+} from "../lib/procedureTemplates";
 
 describe("procedureTemplates", () => {
   it("returns the matching template for a known procedure id", () => {
@@ -16,5 +21,21 @@ describe("procedureTemplates", () => {
   it("exposes every template as a selectable option", () => {
     expect(PROCEDURE_OPTIONS.length).toBe(Object.keys(PROCEDURE_TEMPLATES).length);
     expect(PROCEDURE_OPTIONS.some((o) => o.id === "tahbso")).toBe(true);
+  });
+
+  it("filters options to the obstetric category plus 'other'", () => {
+    const options = getProcedureOptionsByCategory("obstetric");
+    expect(options.some((o) => o.id === "cesarean_section")).toBe(true);
+    expect(options.some((o) => o.id === "btl_postpartum")).toBe(true);
+    expect(options.some((o) => o.id === "other")).toBe(true);
+    expect(options.some((o) => o.id === "tahbso")).toBe(false);
+  });
+
+  it("filters options to the gynecologic category plus 'other'", () => {
+    const options = getProcedureOptionsByCategory("gynecologic");
+    expect(options.some((o) => o.id === "tahbso")).toBe(true);
+    expect(options.some((o) => o.id === "leep")).toBe(true);
+    expect(options.some((o) => o.id === "other")).toBe(true);
+    expect(options.some((o) => o.id === "cesarean_section")).toBe(false);
   });
 });

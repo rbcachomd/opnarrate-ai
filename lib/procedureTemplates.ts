@@ -9,9 +9,12 @@
  * departmental protocols before clinical use.
  */
 
+export type ProcedureCategory = "obstetric" | "gynecologic" | "other";
+
 export interface ProcedureTemplate {
   id: string;
   label: string;
+  category: ProcedureCategory;
   referenceNote: string;
   steps: string[];
 }
@@ -20,6 +23,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   cesarean_section: {
     id: "cesarean_section",
     label: "Cesarean Section (Low Transverse)",
+    category: "obstetric",
     referenceNote:
       "Adapted from standard low-transverse cesarean section sequence (Williams Obstetrics; Te Linde's Operative Gynecology general surgical-step conventions).",
     steps: [
@@ -40,6 +44,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   tahbso: {
     id: "tahbso",
     label: "Total Abdominal Hysterectomy with Bilateral Salpingo-Oophorectomy (TAHBSO)",
+    category: "gynecologic",
     referenceNote:
       "Adapted from standard TAH-BSO sequence (Te Linde's Operative Gynecology general conventions).",
     steps: [
@@ -60,6 +65,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   myomectomy: {
     id: "myomectomy",
     label: "Abdominal Myomectomy",
+    category: "gynecologic",
     referenceNote:
       "Adapted from standard abdominal myomectomy sequence (Te Linde's Operative Gynecology general conventions).",
     steps: [
@@ -79,6 +85,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   d_and_c: {
     id: "d_and_c",
     label: "Dilatation and Curettage (D&C)",
+    category: "gynecologic",
     referenceNote:
       "Adapted from standard D&C sequence (Te Linde's Operative Gynecology general conventions).",
     steps: [
@@ -97,6 +104,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   vaginal_hysterectomy: {
     id: "vaginal_hysterectomy",
     label: "Vaginal Hysterectomy (NDVH)",
+    category: "gynecologic",
     referenceNote:
       "Adapted from standard non-descensus vaginal hysterectomy sequence (Te Linde's Operative Gynecology general conventions).",
     steps: [
@@ -117,6 +125,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   btl_postpartum: {
     id: "btl_postpartum",
     label: "Postpartum Bilateral Tubal Ligation (Modified Pomeroy)",
+    category: "obstetric",
     referenceNote:
       "Adapted from the standard modified Pomeroy postpartum tubal ligation sequence (Williams Obstetrics general conventions), typically performed via mini-laparotomy after vaginal delivery.",
     steps: [
@@ -135,6 +144,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   ovarian_cystectomy: {
     id: "ovarian_cystectomy",
     label: "Ovarian Cystectomy",
+    category: "gynecologic",
     referenceNote:
       "Adapted from standard ovarian cystectomy sequence (Te Linde's Operative Gynecology general conventions); applicable to open or laparoscopic approach per dictation.",
     steps: [
@@ -154,6 +164,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   salpingectomy: {
     id: "salpingectomy",
     label: "Salpingectomy (Ectopic Pregnancy)",
+    category: "obstetric",
     referenceNote:
       "Adapted from standard salpingectomy sequence for tubal ectopic pregnancy (Williams Obstetrics / Te Linde's general conventions); applicable to open or laparoscopic approach per dictation.",
     steps: [
@@ -172,6 +183,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   leep: {
     id: "leep",
     label: "LEEP (Loop Electrosurgical Excision Procedure)",
+    category: "gynecologic",
     referenceNote:
       "Adapted from standard LEEP sequence for cervical intraepithelial neoplasia management (general colposcopy/cervical excision conventions).",
     steps: [
@@ -189,6 +201,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   perineal_laceration_repair: {
     id: "perineal_laceration_repair",
     label: "Perineal Laceration Repair (2nd–4th Degree)",
+    category: "obstetric",
     referenceNote:
       "Adapted from standard perineal laceration repair sequence following vaginal delivery (Williams Obstetrics general conventions).",
     steps: [
@@ -206,6 +219,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   d_and_e: {
     id: "d_and_e",
     label: "Dilatation and Evacuation (D&E)",
+    category: "obstetric",
     referenceNote:
       "Adapted from standard D&E sequence (Williams Obstetrics / Te Linde's general conventions), distinguished from D&C by gestational-age-appropriate cervical preparation and evacuation technique.",
     steps: [
@@ -224,6 +238,7 @@ export const PROCEDURE_TEMPLATES: Record<string, ProcedureTemplate> = {
   other: {
     id: "other",
     label: "Other / Custom Procedure",
+    category: "other",
     referenceNote:
       "No curated template available — generation will rely primarily on the physician's dictated summary. Use with additional care and review.",
     steps: [
@@ -244,3 +259,14 @@ export const PROCEDURE_OPTIONS = Object.values(PROCEDURE_TEMPLATES).map((t) => (
   id: t.id,
   label: t.label,
 }));
+
+/**
+ * Returns procedure options belonging to the chosen top-level category
+ * (Obstetric or Gynecologic), with the "Other / Custom Procedure" template
+ * always appended at the end so it remains available regardless of category.
+ */
+export function getProcedureOptionsByCategory(category: "obstetric" | "gynecologic") {
+  return Object.values(PROCEDURE_TEMPLATES)
+    .filter((t) => t.category === category || t.category === "other")
+    .map((t) => ({ id: t.id, label: t.label }));
+}
