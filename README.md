@@ -3,7 +3,7 @@
 **AI-assisted, evidence-based Operative Technique & Findings generator for OB-GYN surgeons.**
 
 Live demo: `https://opnarrate-ai.vercel.app
-Demo video: *(add your 2-minute recording link here — see `docs/demo-script.md`)*
+Demo video: [OpNarrate AI Demo Recording](https://drive.google.com/file/d/1AXBA0cZgmdfGW6IIp0TgNt7hG30DVYXy/view?usp=sharing)
 
 ---
 
