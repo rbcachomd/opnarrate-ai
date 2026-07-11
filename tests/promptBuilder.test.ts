@@ -61,4 +61,11 @@ describe("buildUserPrompt", () => {
     const prompt = buildUserPrompt(custom);
     expect(prompt).toContain("Laparoscopic Salpingectomy");
   });
+
+  it("instructs the model to prefer dictated technical specifics over generic template wording", () => {
+    expect(SYSTEM_PROMPT).toContain("TECHNICAL SPECIFICITY");
+    expect(SYSTEM_PROMPT.toLowerCase()).toContain("suture");
+    const prompt = buildUserPrompt(sample);
+    expect(prompt).toContain("use that exact wording in place of the outline's generic phrasing");
+  });
 });

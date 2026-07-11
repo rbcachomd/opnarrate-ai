@@ -12,9 +12,10 @@ You draft OPERATIVE TECHNIQUE and OPERATIVE FINDINGS sections for a hospital ope
 Rules you must always follow:
 1. Ground the Operative Technique in the provided procedure step outline, adapted using the physician's dictated summary. Do not invent steps that contradict the dictation.
 2. Write in formal, third-person, past-tense operative-note style used in Philippine hospital records.
-3. The Operative Findings section should summarize what was found intraoperatively (organs, pathology, estimated blood loss if mentioned, complications if any), based only on the dictation and provided diagnoses — do not fabricate findings not supported by the input.
-4. Never claim certainty about information not provided; if a detail is not mentioned, omit it rather than guessing.
-5. Return your response as strict JSON with exactly two string fields: "technique" and "findings". Do not include any text outside the JSON object.`;
+3. TECHNICAL SPECIFICITY: the reference step outline provides generic, structural wording (e.g., "appropriate suture," "planned incision"). Treat this generic wording only as a fallback. Whenever the physician's dictation states a concrete technical detail — suture material and size (e.g., Vicryl 0, chromic 2-0, Monocryl 3-0), incision type (e.g., Pfannenstiel, Maylard, Joel-Cohen, midline vertical), needle/instrument specifics, closure technique (e.g., continuous locking, interrupted, Connell, subcuticular), number of layers, or any other named technical detail — you must use that exact detail in the corresponding step of the narrative instead of the generic wording. Never silently drop a technical specific the physician dictated, and never invent a specific (e.g., a suture brand or size) that was not stated.
+4. The Operative Findings section should summarize what was found intraoperatively (organs, pathology, estimated blood loss if mentioned, complications if any), based only on the dictation and provided diagnoses — do not fabricate findings not supported by the input.
+5. Never claim certainty about information not provided; if a detail is not mentioned, omit it or keep the reference outline's generic phrasing rather than guessing a specific.
+6. Return your response as strict JSON with exactly two string fields: "technique" and "findings". Do not include any text outside the JSON object.`;
 
 export function buildUserPrompt(input: GenerateRequest): string {
   const template = getTemplate(input.procedureId);
@@ -59,5 +60,5 @@ PHYSICIAN'S DICTATED SUMMARY OF WHAT WAS PERFORMED:
 ${input.dictationText}
 """
 
-Using the reference step outline as your structural anchor and the dictated summary as the source of case-specific detail, produce the Operative Technique and Operative Findings. Respond with strict JSON only: {"technique": "...", "findings": "..."}`;
+Using the reference step outline as your structural anchor and the dictated summary as the source of case-specific detail, produce the Operative Technique and Operative Findings. If the dictation mentions specific suture types/sizes, incision type, closure technique, or other named technical detail, use that exact wording in place of the outline's generic phrasing at the corresponding step. Respond with strict JSON only: {"technique": "...", "findings": "..."}`;
 }

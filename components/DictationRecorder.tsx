@@ -92,11 +92,15 @@ export default function DictationRecorder({ value, onChange }: DictationRecorder
           in Chrome/Edge desktop).
         </p>
       )}
+      <p className="text-xs text-gray-500">
+        Tip: mention specific details as you dictate — incision type, suture material and size,
+        closure technique — and the AI will use your exact wording instead of generic phrasing.
+      </p>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={6}
-        placeholder="e.g., Performed primary low transverse cesarean section for arrest of dilatation. Delivered live baby boy, cephalic, good cry. Placenta delivered complete. Estimated blood loss 500 mL. No complications..."
+        placeholder="e.g., Performed primary low transverse cesarean section via Pfannenstiel incision for arrest of dilatation. Uterine incision closed in two layers with Vicryl 0, continuous locking. Delivered live baby boy, cephalic, good cry. Placenta delivered complete. Estimated blood loss 500 mL. No complications..."
         className="w-full rounded-md border border-gray-300 p-3 text-sm focus:border-obgyn-navy focus:outline-none focus:ring-1 focus:ring-obgyn-navy"
         required
         minLength={10}
